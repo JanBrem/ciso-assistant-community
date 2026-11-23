@@ -1966,6 +1966,24 @@ def _attachment_stored(evidence_id):
         return None
 
 
+def set_evidence_link(evidence_id, link) -> str:
+    """Set the link of the evidence's latest revision (the evidence shows the link
+    of its latest revision; it has no link field of its own). Returns "" on
+    success, else the reason it failed."""
+    res = make_get_request(f"/evidences/{evidence_id}/")
+    if res.status_code != 200:
+        return f"reading the evidence: {res.status_code} - {res.text}"
+    revision = res.json().get("latest_revision")
+    if isinstance(revision, dict):
+        revision = revision.get("id")
+    if not revision:
+        return "the evidence has no revision yet"
+    upd = make_patch_request(f"/evidence-revisions/{revision}/", {"link": link})
+    if upd.status_code != 200:
+        return f"{upd.status_code} - {upd.text}"
+    return ""
+
+
 def _rollback_note(evidence_id) -> str:
     if _delete_evidence_quietly(evidence_id):
         return ""
@@ -2081,8 +2099,6 @@ async def create_evidence(
                 payload["findings_assessments"] = binder_ids
             if requirement_ids:
                 payload["requirement_assessments"] = requirement_ids
-            if link:
-                payload["link"] = link
 
             res = make_post_request("/evidences/", payload)
             if res.status_code != 201:
@@ -2119,6 +2135,11 @@ async def create_evidence(
                     f"{_rollback_note(evidence_id)}"
                 )
 
+            if link:
+                failure = set_evidence_link(evidence_id, link)
+                if failure:
+                    return f"{created}; Error: link not set: {failure}"
+                created += f", link {link}"
             return created
     except Exception as e:
         return f"Error in create_evidence: {str(e)}"

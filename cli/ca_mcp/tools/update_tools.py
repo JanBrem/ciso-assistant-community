@@ -537,21 +537,27 @@ async def update_evidence(
             payload["description"] = description
         if folder_id is not None:
             payload["folder"] = resolve_folder_id(folder_id)
-        if link is not None:
-            payload["link"] = link
-
-        if not payload:
+        if not payload and link is None:
             return "Error: No fields provided to update"
 
-        res = make_patch_request(f"/evidences/{resolved_id}/", payload)
-
-        if res.status_code == 200:
+        done = f"Updated evidence {resolved_id}"
+        if payload:
+            res = make_patch_request(f"/evidences/{resolved_id}/", payload)
+            if res.status_code != 200:
+                return f"Error updating evidence: {res.status_code} - {res.text}"
             evidence = res.json()
-            return (
+            done = (
                 f"Updated evidence: {evidence.get('name')} (ID: {evidence.get('id')})"
             )
-        else:
-            return f"Error updating evidence: {res.status_code} - {res.text}"
+
+        if link is not None:
+            from .write_tools import set_evidence_link
+
+            failure = set_evidence_link(resolved_id, link)
+            if failure:
+                return f"{done}; Error: link not set: {failure}"
+            done += f"; link set to {link or '(empty)'}"
+        return done
     except Exception as e:
         return f"Error in update_evidence: {str(e)}"
 
