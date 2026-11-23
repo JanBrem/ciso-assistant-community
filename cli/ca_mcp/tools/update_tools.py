@@ -484,6 +484,7 @@ async def update_evidence(
     add_requirement_assessments: list = None,
     remove_requirement_assessments: list = None,
     compliance_assessment: str = None,
+    link: str = None,
 ) -> str:
     """Update an evidence - only provided fields are updated
 
@@ -498,6 +499,7 @@ async def update_evidence(
         remove_requirement_assessments: Audit requirements to unlink (same forms)
         compliance_assessment: Compliance assessment (audit) ID/name in which
             ref IDs are looked up
+        link: URL for the evidence's Link field; "" clears it
     """
     try:
         resolved_id = resolve_evidence_id(evidence_id)
@@ -535,6 +537,8 @@ async def update_evidence(
             payload["description"] = description
         if folder_id is not None:
             payload["folder"] = resolve_folder_id(folder_id)
+        if link is not None:
+            payload["link"] = link
 
         if not payload:
             return "Error: No fields provided to update"

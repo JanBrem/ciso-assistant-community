@@ -1981,6 +1981,7 @@ async def create_evidence(
     findings_assessments: list = None,
     requirement_assessments: list = None,
     compliance_assessment: str = None,
+    link: str = None,
 ) -> str:
     """Create a new evidence with one attachment read from a local file
 
@@ -2012,6 +2013,8 @@ async def create_evidence(
             "AM-02.04B"); ref IDs need compliance_assessment
         compliance_assessment: Compliance assessment (audit) ID/name in which
             the ref IDs of requirement_assessments are looked up
+        link: URL where a reviewer sees the source live (e.g. the admin
+            console page), stored in the evidence's Link field
     """
     try:
         path = Path(file_path).expanduser().resolve()
@@ -2078,6 +2081,8 @@ async def create_evidence(
                 payload["findings_assessments"] = binder_ids
             if requirement_ids:
                 payload["requirement_assessments"] = requirement_ids
+            if link:
+                payload["link"] = link
 
             res = make_post_request("/evidences/", payload)
             if res.status_code != 201:

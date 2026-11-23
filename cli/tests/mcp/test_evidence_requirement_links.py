@@ -205,3 +205,38 @@ class TestUpdateEvidenceRequirements:
         out, patch_req = self._run([], add_requirement_assessments=["AM-99.01B"])
         patch_req.assert_not_called()
         assert out.startswith("Error") and "AM-99.01B" in out
+
+
+class TestEvidenceLink:
+    def test_create_sends_link(self, tmp_path):
+        path = tmp_path / "log.md"
+        path.write_text("# log", encoding="utf-8")
+        patches = _create_mocks()
+        started = [p.__enter__() for p in patches]
+        try:
+            run(
+                write_tools.create_evidence(
+                    file_path=str(path), name="Log", link="https://example.org/x"
+                )
+            )
+        finally:
+            for p in reversed(patches):
+                p.__exit__(None, None, None)
+        assert started[2].call_args.args[1]["link"] == "https://example.org/x"
+
+    def test_update_sets_link_only(self):
+        with (
+            patch.object(update_tools, "resolve_evidence_id", return_value=UUID_A),
+            patch.object(update_tools, "make_get_request") as get_req,
+            patch.object(
+                update_tools,
+                "make_patch_request",
+                return_value=_response(200, {"id": UUID_A, "name": "Log"}),
+            ) as patch_req,
+        ):
+            run(update_tools.update_evidence(UUID_A, link="https://example.org/x"))
+        get_req.assert_not_called()
+        assert patch_req.call_args.args == (
+            f"/evidences/{UUID_A}/",
+            {"link": "https://example.org/x"},
+        )
